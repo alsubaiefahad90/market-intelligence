@@ -4,31 +4,30 @@ import { useState } from "react";
 export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMsg = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMsg]);
+
+    const currentInput = input;
     setInput("");
-    setLoading(true);
 
     const res = await fetch("/api/analyze", {
       method: "POST",
-      body: JSON.stringify({ input }),
+      body: JSON.stringify({ input: currentInput }),
     });
 
     const data = await res.json();
 
-    let aiMessage = { role: "ai", content: data.output };
+    let aiMsg = { role: "ai", content: data.output };
 
     try {
-      aiMessage.parsed = JSON.parse(data.output);
+      aiMsg.parsed = JSON.parse(data.output);
     } catch {}
 
-    setMessages((prev) => [...prev, aiMessage]);
-    setLoading(false);
+    setMessages((prev) => [...prev, aiMsg]);
   };
 
   return (
@@ -36,9 +35,7 @@ export default function Home() {
       {/* Header */}
       <div style={styles.header}>
         <h1>QATNAN AI</h1>
-        <p style={{ opacity: 0.6 }}>
-          Strategic Intelligence
-        </p>
+        <p>Strategic Intelligence</p>
       </div>
 
       {/* Chat */}
@@ -51,7 +48,7 @@ export default function Home() {
               alignSelf:
                 msg.role === "user" ? "flex-end" : "flex-start",
               background:
-                msg.role === "user" ? "#000" : "#f5f5f5",
+                msg.role === "user" ? "#000" : "#f2f2f2",
               color:
                 msg.role === "user" ? "#fff" : "#000",
             }}
@@ -63,8 +60,6 @@ export default function Home() {
             )}
           </div>
         ))}
-
-        {loading && <p>Thinking...</p>}
       </div>
 
       {/* Input */}
@@ -72,11 +67,10 @@ export default function Home() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="اسأل..."
+          placeholder="اكتب سؤالك..."
           style={styles.input}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
-
         <button onClick={sendMessage} style={styles.button}>
           Send
         </button>
@@ -85,7 +79,7 @@ export default function Home() {
   );
 }
 
-// 🧠 عرض الرد بشكل مرتب
+// 🎯 عرض التحليل بشكل مرتب
 function StructuredResponse({ data }) {
   return (
     <div>
