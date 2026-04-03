@@ -1,75 +1,67 @@
-import { saveMemory, getMemory } from "../../../../lib/memory";
+import OpenAI from "openai";
+
+let memory = [];
 
 export async function POST(req) {
   try {
     const body = await req.json();
+    const input = body.input;
 
-    // 🧠 استرجاع الذاكرة
-    const history = getMemory();
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
-    const context = history
-      .map((h) => `طلب سابق: ${h.input}\nنتيجة: ${h.output}`)
+    // 🧠 ذاكرة بسيطة
+    const context = memory
+      .slice(-5)
+      .map((m) => `سؤال: ${m.input}\nجواب: ${m.output}`)
       .join("\n\n");
 
-    // 🧠 نظام التفكير (مختصر وسريع)
-    const systemPrompt = `
-أنت محلل سوق ذكي.
-أعطِ تحليل واضح + فرص قابلة للتنفيذ.
-ارجع النتيجة بصيغة JSON فقط بهذا الشكل:
+    const prompt = `
+أنت نظام ذكاء استثماري واستراتيجي متقدم.
 
-{
-  "market_analysis": "...",
-  "sectors": ["...", "..."],
-  "opportunities": [
-    {
-      "title": "...",
-      "reason": "...",
-      "hidden_edge": "..."
-    }
-  ],
-  "decision": {
-    "entry": "yes/no",
-    "risk": "low/medium/high",
-    "term": "short/medium/long"
-  },
-  "execution": "..."
-}
+تفكيرك:
+- لا تعطي إجابات سطحية
+- ابحث عن العلاقات المخفية
+- اربط بين الاقتصاد والتقنية والتنظيم
+- استخرج فرص غير واضحة
+
+السياق السابق:
+${context}
+
+حلل الطلب التالي بعمق:
+
+${input}
+
+أعطِ:
+1. تحليل السوق
+2. القطاعات
+3. 1-3 فرص حقيقية (مع سبب + ميزة مخفية)
+4. قرار (دخول / مخاطرة / مدة)
+5. طريقة التنفيذ
 `;
 
-    // 🔥 طلب OpenAI
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // ⚡ سريع + ذكي
-        input: `${systemPrompt}\n\n${context}\n\nتحليل:\n${body.input}`,
-        temperature: 0.7,
-        max_output_tokens: 500,
-      }),
+    const response = await client.responses.create({
+      model: "gpt-4o-mini",
+      input: prompt,
+      temperature: 0.7,
     });
 
-    const data = await response.json();
-
-    // 🛑 لو فيه خطأ (مهم جدًا)
-    if (data.error) {
-      return Response.json({ error: data.error });
-    }
-
-    // 🧠 استخراج النص
-    const output =
-      data.output?.[0]?.content?.[0]?.text || JSON.stringify(data);
+    const text =
+      response.output?.[0]?.content?.[0]?.text || "لا يوجد رد";
 
     // 💾 حفظ في الذاكرة
-    saveMemory({
-      input: body.input,
-      output: output,
+    memory.push({
+      input,
+      output: text,
     });
 
-    return Response.json({ output });
+    return Response.json({
+      market_analysis: text,
+    });
   } catch (error) {
-    return Response.json({ error: error.message });
+    return Response.json({
+      error: error.message,
+    });
   }
 }
