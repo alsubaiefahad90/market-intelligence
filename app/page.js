@@ -8,8 +8,8 @@ export default function Home() {
   const sendMessage = async () => {
     if (!input) return;
 
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMsg = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
     const res = await fetch("/api/analyze", {
@@ -22,54 +22,104 @@ export default function Home() {
 
     const data = await res.json();
 
-    const botMessage = {
+    const botMsg = {
       role: "bot",
-      content: JSON.stringify(data, null, 2),
+      content: data.market_analysis || JSON.stringify(data),
     };
 
-    setMessages((prev) => [...prev, botMessage]);
+    setMessages((prev) => [...prev, botMsg]);
   };
 
   return (
-    <main style={{ padding: "40px", maxWidth: "800px", margin: "auto" }}>
-      <h1>QATNAN AI</h1>
+    <main style={styles.container}>
+      <h1 style={styles.title}>QATNAN AI</h1>
+      <p style={styles.subtitle}>Strategic Intelligence Engine</p>
 
       {/* الرسائل */}
-      <div style={{ marginBottom: "20px" }}>
+      <div style={styles.chatBox}>
         {messages.map((msg, i) => (
           <div
             key={i}
             style={{
-              textAlign: msg.role === "user" ? "right" : "left",
-              marginBottom: "10px",
+              ...styles.message,
+              alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+              background:
+                msg.role === "user" ? "#000" : "#f1f1f1",
+              color: msg.role === "user" ? "#fff" : "#000",
             }}
           >
-            <div
-              style={{
-                display: "inline-block",
-                padding: "10px",
-                borderRadius: "10px",
-                background: msg.role === "user" ? "#d1e7ff" : "#f1f1f1",
-              }}
-            >
-              <pre style={{ margin: 0 }}>{msg.content}</pre>
-            </div>
+            {msg.content}
           </div>
         ))}
       </div>
 
       {/* الإدخال */}
-      <div style={{ display: "flex", gap: "10px" }}>
+      <div style={styles.inputArea}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="اكتب سؤالك..."
-          style={{ flex: 1, padding: "10px" }}
+          placeholder="اكتب سؤالك التحليلي..."
+          style={styles.input}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
-
-        <button onClick={sendMessage}>Send</button>
+        <button onClick={sendMessage} style={styles.button}>
+          إرسال
+        </button>
       </div>
     </main>
   );
 }
+
+const styles = {
+  container: {
+    maxWidth: "900px",
+    margin: "auto",
+    padding: "40px",
+    fontFamily: "system-ui",
+  },
+  title: {
+    fontSize: "28px",
+    fontWeight: "bold",
+    marginBottom: "5px",
+  },
+  subtitle: {
+    color: "#666",
+    marginBottom: "20px",
+  },
+  chatBox: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    minHeight: "400px",
+    border: "1px solid #eee",
+    padding: "20px",
+    borderRadius: "10px",
+    background: "#fafafa",
+    marginBottom: "15px",
+  },
+  message: {
+    padding: "10px 15px",
+    borderRadius: "10px",
+    maxWidth: "70%",
+    fontSize: "14px",
+    lineHeight: "1.5",
+  },
+  inputArea: {
+    display: "flex",
+    gap: "10px",
+  },
+  input: {
+    flex: 1,
+    padding: "12px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+  },
+  button: {
+    padding: "12px 20px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#000",
+    color: "#fff",
+    cursor: "pointer",
+  },
+};
