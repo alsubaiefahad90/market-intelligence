@@ -63,9 +63,15 @@ ${context}
     }),
   });
 
-  const data = await response.json();
+const data = await response.json();
 
-  let output = data.choices?.[0]?.message?.content || "{}";
+if (!response.ok) {
+  return Response.json({
+    error: data
+  });
+}
+
+let output = data.choices?.[0]?.message?.content || "{}";
   
   // 🧹 التعديل الأمني: تنظيف المخرجات من علامات Markdown لحماية الموقع
   output = output.replace(/```json/g, "").replace(/```/g, "").trim();
