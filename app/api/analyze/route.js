@@ -83,7 +83,7 @@ let output = data.choices?.[0]?.message?.content || "{}";
   });
 
   return Response.json({
-    success: true,
-    data: output
-  });
-}
+  success: true,
+  raw: data,
+  output: output
+});
