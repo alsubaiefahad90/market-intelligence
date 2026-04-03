@@ -1,75 +1,75 @@
-import { saveMemory, getMemory } from "../../../lib/memory";
+import { saveMemory, getMemory } from "../../../../lib/memory";
 
 export async function POST(req) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  // 1. استرجاع السياق من الذاكرة
-  const history = getMemory();
-  const context = history.map(h =>
-    `طلب سابق: ${h.input}\nنتيجة: ${h.output}`
-  ).join("\n\n");
+    // 🧠 استرجاع الذاكرة
+    const history = getMemory();
 
-  // 2. إعداد التوجيهات للنظام
-  const systemPrompt = `
-أنت نظام ذكاء استثماري متقدم. مهمتك تحليل الأسواق واستخراج فرص حقيقية.
-يجب أن يكون الرد بصيغة JSON فقط كما يلي:
+    const context = history
+      .map((h) => `طلب سابق: ${h.input}\nنتيجة: ${h.output}`)
+      .join("\n\n");
+
+    // 🧠 نظام التفكير (مختصر وسريع)
+    const systemPrompt = `
+أنت محلل سوق ذكي.
+أعطِ تحليل واضح + فرص قابلة للتنفيذ.
+ارجع النتيجة بصيغة JSON فقط بهذا الشكل:
+
 {
-  "market_analysis": "تحليل عام للمشهد",
-  "sectors": ["قطاع 1", "قطاع 2"],
+  "market_analysis": "...",
+  "sectors": ["...", "..."],
   "opportunities": [
     {
-      "title": "اسم الفرصة",
-      "reason": "لماذا الآن؟",
-      "hidden_edge": "الميزة التنافسية"
+      "title": "...",
+      "reason": "...",
+      "hidden_edge": "..."
     }
   ],
   "decision": {
     "entry": "yes/no",
     "risk": "low/medium/high",
-    "term": "short/long"
+    "term": "short/medium/long"
   },
-  "execution": "خطة العمل"
+  "execution": "..."
 }
-السياق السابق:
-${context}
 `;
 
-  // 3. الاتصال بـ OpenAI
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      max_tokens: 1000,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: body.input }
-      ]
-    }),
-  });
+    // 🔥 طلب OpenAI
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini", // ⚡ سريع + ذكي
+        input: `${systemPrompt}\n\n${context}\n\nتحليل:\n${body.input}`,
+        temperature: 0.7,
+        max_output_tokens: 500,
+      }),
+    });
 
-  const data = await response.json();
+    const data = await response.json();
 
-  if (!response.ok) {
-    return Response.json({ error: data });
+    // 🛑 لو فيه خطأ (مهم جدًا)
+    if (data.error) {
+      return Response.json({ error: data.error });
+    }
+
+    // 🧠 استخراج النص
+    const output =
+      data.output?.[0]?.content?.[0]?.text || JSON.stringify(data);
+
+    // 💾 حفظ في الذاكرة
+    saveMemory({
+      input: body.input,
+      output: output,
+    });
+
+    return Response.json({ output });
+  } catch (error) {
+    return Response.json({ error: error.message });
   }
-
-  // 4. تنظيف ومعالجة المخرجات
-  let output = data.choices?.[0]?.message?.content || "{}";
-  output = output.replace(/```json/g, "").replace(/```/g, "").trim();
-
-  // 5. حفظ العملية في الذاكرة
-  saveMemory({
-    input: body.input,
-    output: output
-  });
-
-  return Response.json({
-    success: true,
-    data: output
-  });
 }
