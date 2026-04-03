@@ -2,13 +2,17 @@
 import { useState } from "react";
 
 export default function Home() {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const analyze = async () => {
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
     setLoading(true);
-    setResult(null);
 
     const res = await fetch("/api/analyze", {
       method: "POST",
@@ -17,99 +21,138 @@ export default function Home() {
 
     const data = await res.json();
 
-    try {
-      const parsed = JSON.parse(data.output);
-      setResult(parsed);
-    } catch {
-      console.log("Parsing error", data);
-    }
+    let aiMessage = { role: "ai", content: data.output };
 
+    try {
+      aiMessage.parsed = JSON.parse(data.output);
+    } catch {}
+
+    setMessages((prev) => [...prev, aiMessage]);
     setLoading(false);
   };
 
   return (
-    <main style={{ padding: "40px", fontFamily: "sans-serif" }}>
-      <h1 style={{ fontSize: "32px", marginBottom: "20px" }}>
-        🚀 AI Market Intelligence
-      </h1>
+    <main style={styles.container}>
+      {/* Header */}
+      <div style={styles.header}>
+        <h1>QATNAN AI</h1>
+        <p style={{ opacity: 0.6 }}>
+          Strategic Intelligence
+        </p>
+      </div>
+
+      {/* Chat */}
+      <div style={styles.chat}>
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            style={{
+              ...styles.message,
+              alignSelf:
+                msg.role === "user" ? "flex-end" : "flex-start",
+              background:
+                msg.role === "user" ? "#000" : "#f5f5f5",
+              color:
+                msg.role === "user" ? "#fff" : "#000",
+            }}
+          >
+            {msg.parsed ? (
+              <StructuredResponse data={msg.parsed} />
+            ) : (
+              msg.content
+            )}
+          </div>
+        ))}
+
+        {loading && <p>Thinking...</p>}
+      </div>
 
       {/* Input */}
-      <textarea
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="اكتب السوق أو الفكرة..."
-        style={{
-          width: "100%",
-          height: "120px",
-          padding: "10px",
-          marginBottom: "10px",
-        }}
-      />
+      <div style={styles.inputBox}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="اسأل..."
+          style={styles.input}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+        />
 
-      <button onClick={analyze} style={{ padding: "10px 20px" }}>
-        {loading ? "Analyzing..." : "Analyze"}
-      </button>
-
-      {/* Results */}
-      {result && (
-        <div style={{ marginTop: "40px" }}>
-          {/* Market Analysis */}
-          <div style={card}>
-            <h2>📊 Market Analysis</h2>
-            <p>{result.market_analysis}</p>
-          </div>
-
-          {/* Sectors */}
-          <div style={card}>
-            <h2>🏭 Sectors</h2>
-            <ul>
-              {result.sectors.map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Opportunities */}
-          <div style={card}>
-            <h2>💡 Opportunities</h2>
-            {result.opportunities.map((op, i) => (
-              <div key={i} style={innerCard}>
-                <h3>{op.title}</h3>
-                <p><b>Reason:</b> {op.reason}</p>
-                <p><b>Edge:</b> {op.hidden_edge}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Decision */}
-          <div style={card}>
-            <h2>🎯 Decision</h2>
-            <p>Entry: {result.decision.entry}</p>
-            <p>Risk: {result.decision.risk}</p>
-            <p>Term: {result.decision.term}</p>
-          </div>
-
-          {/* Execution */}
-          <div style={card}>
-            <h2>⚙️ Execution</h2>
-            <p>{result.execution}</p>
-          </div>
-        </div>
-      )}
+        <button onClick={sendMessage} style={styles.button}>
+          Send
+        </button>
+      </div>
     </main>
   );
 }
 
-const card = {
-  background: "#f5f5f5",
-  padding: "20px",
-  marginBottom: "20px",
-  borderRadius: "10px",
-};
+// 🧠 عرض الرد بشكل مرتب
+function StructuredResponse({ data }) {
+  return (
+    <div>
+      <p><b>📊 Analysis:</b> {data.market_analysis}</p>
 
-const innerCard = {
-  background: "#fff",
-  padding: "15px",
-  marginTop: "10px",
-  borderRadius: "8px",
+      <p><b>🏭 Sectors:</b></p>
+      <ul>
+        {data.sectors?.map((s, i) => (
+          <li key={i}>{s}</li>
+        ))}
+      </ul>
+
+      <p><b>💡 Opportunities:</b></p>
+      {data.opportunities?.map((op, i) => (
+        <div key={i} style={{ marginBottom: "10px" }}>
+          <b>{op.title}</b>
+          <p>{op.reason}</p>
+          <small>{op.hidden_edge}</small>
+        </div>
+      ))}
+
+      <p><b>🎯 Decision:</b></p>
+      <p>
+        {data.decision?.entry} | {data.decision?.risk} | {data.decision?.term}
+      </p>
+
+      <p><b>⚙️ Execution:</b> {data.execution}</p>
+    </div>
+  );
+}
+
+// 🎨 Styles
+const styles = {
+  container: {
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    fontFamily: "sans-serif",
+  },
+  header: {
+    padding: "20px",
+    borderBottom: "1px solid #eee",
+  },
+  chat: {
+    flex: 1,
+    padding: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    overflowY: "auto",
+  },
+  message: {
+    padding: "12px",
+    borderRadius: "10px",
+    maxWidth: "70%",
+  },
+  inputBox: {
+    display: "flex",
+    padding: "10px",
+    borderTop: "1px solid #eee",
+  },
+  input: {
+    flex: 1,
+    padding: "10px",
+    marginRight: "10px",
+  },
+  button: {
+    padding: "10px 20px",
+  },
 };
