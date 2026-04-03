@@ -1,6 +1,15 @@
 "use client";
 import { useState } from "react";
 
+const getUserId = () => {
+  let id = localStorage.getItem("user_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("user_id", id);
+  }
+  return id;
+};
+
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
@@ -8,8 +17,11 @@ export default function Home() {
   const sendMessage = async () => {
     if (!input) return;
 
-    const userMsg = { role: "user", content: input };
+    const userMsg = { type: "user", text: input };
     setMessages((prev) => [...prev, userMsg]);
+
+    const userId = getUserId();
+
     setInput("");
 
     const res = await fetch("/api/analyze", {
@@ -17,109 +29,62 @@ export default function Home() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ input }),
+      body: JSON.stringify({ input, userId }),
     });
 
     const data = await res.json();
 
-    const botMsg = {
-      role: "bot",
-      content: data.market_analysis || JSON.stringify(data),
-    };
-
-    setMessages((prev) => [...prev, botMsg]);
+    const aiMsg = { type: "ai", text: data.output };
+    setMessages((prev) => [...prev, aiMsg]);
   };
 
+  function extractQuestions(text) {
+    const match = text.split("الأسئلة:");
+    return match[1] || "";
+  }
+
   return (
-    <main style={styles.container}>
-      <h1 style={styles.title}>QATNAN AI</h1>
-      <p style={styles.subtitle}>Strategic Intelligence Engine</p>
+    <main style={{ padding: 30, maxWidth: 800, margin: "auto" }}>
+      <h1>AI Engine</h1>
 
-      {/* الرسائل */}
-      <div style={styles.chatBox}>
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              ...styles.message,
-              alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-              background:
-                msg.role === "user" ? "#000" : "#f1f1f1",
-              color: msg.role === "user" ? "#fff" : "#000",
-            }}
-          >
-            {msg.content}
-          </div>
-        ))}
-      </div>
+      {messages.map((msg, i) => (
+        <div key={i} style={{ marginBottom: 15 }}>
+          {msg.type === "user" ? (
+            <div style={{ textAlign: "right" }}>{msg.text}</div>
+          ) : (
+            <div style={{ background: "#eee", padding: 10 }}>
+              <pre>{msg.text}</pre>
 
-      {/* الإدخال */}
-      <div style={styles.inputArea}>
+              <div>
+                {extractQuestions(msg.text)
+                  .split("\n")
+                  .filter((q) => q.trim())
+                  .map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() =>
+                        setInput(q.replace("-", "").trim())
+                      }
+                      style={{ margin: 4 }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      <div style={{ display: "flex", gap: 10 }}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="اكتب سؤالك التحليلي..."
-          style={styles.input}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          style={{ flex: 1 }}
         />
-        <button onClick={sendMessage} style={styles.button}>
-          إرسال
-        </button>
+        <button onClick={sendMessage}>Send</button>
       </div>
     </main>
   );
 }
-
-const styles = {
-  container: {
-    maxWidth: "900px",
-    margin: "auto",
-    padding: "40px",
-    fontFamily: "system-ui",
-  },
-  title: {
-    fontSize: "28px",
-    fontWeight: "bold",
-    marginBottom: "5px",
-  },
-  subtitle: {
-    color: "#666",
-    marginBottom: "20px",
-  },
-  chatBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    minHeight: "400px",
-    border: "1px solid #eee",
-    padding: "20px",
-    borderRadius: "10px",
-    background: "#fafafa",
-    marginBottom: "15px",
-  },
-  message: {
-    padding: "10px 15px",
-    borderRadius: "10px",
-    maxWidth: "70%",
-    fontSize: "14px",
-    lineHeight: "1.5",
-  },
-  inputArea: {
-    display: "flex",
-    gap: "10px",
-  },
-  input: {
-    flex: 1,
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
-  },
-  button: {
-    padding: "12px 20px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#000",
-    color: "#fff",
-    cursor: "pointer",
-  },
-};
