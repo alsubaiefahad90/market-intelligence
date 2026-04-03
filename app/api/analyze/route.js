@@ -3,30 +3,24 @@ import { saveMemory, getMemory } from "../../../lib/memory";
 export async function POST(req) {
   const body = await req.json();
 
-  // 🧠 استرجاع الذاكرة
+  // 1. استرجاع السياق من الذاكرة
   const history = getMemory();
-
   const context = history.map(h =>
-    `طلب سابق:\n${h.input}\nنتيجة:\n${h.output}`
+    `طلب سابق: ${h.input}\nنتيجة: ${h.output}`
   ).join("\n\n");
 
-  // 🧠 نظام التفكير
+  // 2. إعداد التوجيهات للنظام
   const systemPrompt = `
-أنت نظام ذكاء استثماري واستراتيجي متقدم.
-
-مهمتك:
-تحليل الأسواق واستخراج فرص حقيقية قابلة للتنفيذ.
-
-اعمل وفق هذا الهيكل فقط:
-
+أنت نظام ذكاء استثماري متقدم. مهمتك تحليل الأسواق واستخراج فرص حقيقية.
+يجب أن يكون الرد بصيغة JSON فقط كما يلي:
 {
-  "market_analysis": "...",
-  "sectors": ["...", "..."],
+  "market_analysis": "تحليل عام للمشهد",
+  "sectors": ["قطاع 1", "قطاع 2"],
   "opportunities": [
     {
-      "title": "...",
-      "reason": "...",
-      "hidden_edge": "..."
+      "title": "اسم الفرصة",
+      "reason": "لماذا الآن؟",
+      "hidden_edge": "الميزة التنافسية"
     }
   ],
   "decision": {
@@ -34,19 +28,13 @@ export async function POST(req) {
     "risk": "low/medium/high",
     "term": "short/long"
   },
-  "execution": "..."
+  "execution": "خطة العمل"
 }
-
-❗ قواعد صارمة:
-- أرجع JSON فقط
-- لا تكتب أي نص خارج JSON
-- اربط كل شيء بتحليل منطقي
-- لا تعطي كلام عام
-
 السياق السابق:
 ${context}
 `;
 
+  // 3. الاتصال بـ OpenAI
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -56,7 +44,7 @@ ${context}
     body: JSON.stringify({
       model: "gpt-4o-mini",
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 1000,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: body.input }
@@ -66,26 +54,22 @@ ${context}
 
   const data = await response.json();
 
-if (!response.ok) {
-  return Response.json({
-    success: true,
-    data: output
-  });
-}
+  if (!response.ok) {
+    return Response.json({ error: data });
+  }
 
-let output = data.choices?.[0]?.message?.content || "{}";
-  
-  // 🧹 التعديل الأمني: تنظيف المخرجات من علامات Markdown لحماية الموقع
+  // 4. تنظيف ومعالجة المخرجات
+  let output = data.choices?.[0]?.message?.content || "{}";
   output = output.replace(/```json/g, "").replace(/```/g, "").trim();
 
-  // 💾 حفظ في الذاكرة
+  // 5. حفظ العملية في الذاكرة
   saveMemory({
     input: body.input,
     output: output
   });
 
   return Response.json({
-  success: true,
-  raw: data,
-  output: output
-});
+    success: true,
+    data: output
+  });
+}
