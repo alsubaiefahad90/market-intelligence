@@ -1,11 +1,12 @@
 "use client";
+
 import { useState } from "react";
 
-export default function TestPage() {
+export default function Home() {
   const [input, setInput] = useState("");
-  const [output, setOutput] = useState("");
+  const [result, setResult] = useState("");
 
-  async function handleAnalyze() {
+  const handleAnalyze = async () => {
     const res = await fetch("/api/analyze", {
       method: "POST",
       headers: {
@@ -15,18 +16,18 @@ export default function TestPage() {
     });
 
     const data = await res.json();
-    setOutput(data.output);
-  }
+    setResult(data.data);
+  };
 
   return (
-    <main style={{ padding: 20 }}>
+    <div style={{ padding: "40px" }}>
       <h1>AI Engine</h1>
 
       <textarea
-        placeholder="اكتب Signal هنا..."
+        rows="6"
+        style={{ width: "100%" }}
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        style={{ width: "100%", height: 150 }}
       />
 
       <br /><br />
@@ -35,9 +36,9 @@ export default function TestPage() {
         Analyze
       </button>
 
-      <pre style={{ marginTop: 20, whiteSpace: "pre-wrap" }}>
-        {output}
+      <pre style={{ marginTop: "20px", whiteSpace: "pre-wrap" }}>
+        {result}
       </pre>
-    </main>
+    </div>
   );
 }
