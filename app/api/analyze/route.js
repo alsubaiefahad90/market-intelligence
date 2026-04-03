@@ -68,7 +68,8 @@ ${context}
 
 if (!response.ok) {
   return Response.json({
-    error: data
+    success: true,
+    data: output
   });
 }
 
