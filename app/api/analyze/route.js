@@ -53,17 +53,18 @@ ${context}
       "Content-Type": "application/json",
       "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
     },
-   body: JSON.stringify({
+    body: JSON.stringify({
       model: "gpt-4o-mini",
       temperature: 0.7,
-      max_tokens: 800, // رفعتها شوي لـ 800 لأن اللغة العربية تستهلك توكنز أكثر
+      max_tokens: 800,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: body.input }
       ]
     }),
+  });
 
-const data = await response.json();
+  const data = await response.json();
 
 if (!response.ok) {
   return Response.json({
